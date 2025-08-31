@@ -4,7 +4,7 @@ Windowsデスクトップで開かれているフォルダパスを記憶し、�
 
 ## スクリーンショット
 
-![NextExplorer メイン画面](スクリーンショット%202025-09-01%20080407.png)
+![NextExplorer メイン画面](screenshot_main_window.png)
 
 *NextExplorerのメイン画面。上部パネルに現在開いているフォルダ、下部パネルに保存されたセッションが表示されます。*
 
