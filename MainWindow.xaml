@@ -66,9 +66,9 @@
         <!-- Main Content -->
         <Grid Grid.Row="2" Margin="5">
             <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
+                <RowDefinition Height="2*"/>
                 <RowDefinition Height="5"/>
-                <RowDefinition Height="*"/>
+                <RowDefinition Height="3*"/>
             </Grid.RowDefinitions>
 
             <!-- Current Folders Panel -->

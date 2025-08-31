@@ -44,6 +44,9 @@ namespace NextExplorer.Utils
         [DllImport("shell32.dll")]
         public static extern int SHGetPathFromIDList(IntPtr pidl, StringBuilder pszPath);
 
+        [DllImport("shell32.dll")]
+        public static extern IntPtr SHGetPathFromIDListW(IntPtr pidl, StringBuilder pszPath);
+
         [StructLayout(LayoutKind.Sequential)]
         public struct SHFILEINFO
         {
@@ -92,7 +95,9 @@ namespace NextExplorer.Utils
             int length = GetWindowTextLength(hWnd);
             if (length == 0) return string.Empty;
 
-            var sb = new StringBuilder(length + 1);
+            // 長いパス名に対応するため、バッファサイズを大きく設定
+            int bufferSize = Math.Max(length + 1, 32768); // 32KB確保
+            var sb = new StringBuilder(bufferSize);
             GetWindowText(hWnd, sb, sb.Capacity);
             return sb.ToString();
         }
@@ -109,12 +114,16 @@ namespace NextExplorer.Utils
             if (string.IsNullOrEmpty(windowTitle))
                 return null;
 
+            // 直接パスの場合
             if (windowTitle.Length >= 3 && windowTitle[1] == ':' && 
                 (windowTitle[2] == '\\' || windowTitle[2] == '/'))
             {
-                return windowTitle.Replace('/', '\\');
+                var normalizedPath = windowTitle.Replace('/', '\\');
+                if (System.IO.Directory.Exists(normalizedPath))
+                    return normalizedPath;
             }
 
+            // " - " で分割されている場合
             var pathIndex = windowTitle.LastIndexOf(" - ");
             if (pathIndex > 0)
             {
@@ -125,12 +134,70 @@ namespace NextExplorer.Utils
                 }
             }
 
+            // ウィンドウタイトル全体がパスの場合
             if (System.IO.Directory.Exists(windowTitle))
             {
                 return windowTitle;
             }
 
+            // 部分的に切り詰められている可能性を考慮
+            // パスの最後の部分を段階的に削除して確認
+            var testPath = windowTitle;
+            while (!string.IsNullOrEmpty(testPath) && testPath.Length > 10)
+            {
+                if (System.IO.Directory.Exists(testPath))
+                    return testPath;
+                
+                // 最後の文字を削除して再試行
+                testPath = testPath.Substring(0, testPath.Length - 1);
+                
+                // より効率的に、区切り文字まで戻る
+                var lastSeparator = Math.Max(testPath.LastIndexOf('\\'), testPath.LastIndexOf('/'));
+                if (lastSeparator > 0)
+                {
+                    testPath = testPath.Substring(0, lastSeparator);
+                    if (System.IO.Directory.Exists(testPath))
+                    {
+                        // 親ディレクトリが見つかった場合、子ディレクトリを探索
+                        return FindLongestMatchingPath(testPath, windowTitle);
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+
             return null;
+        }
+
+        /// <summary>
+        /// 指定された親ディレクトリから、ウィンドウタイトルに最も近い子フォルダを探す
+        /// </summary>
+        private static string? FindLongestMatchingPath(string parentPath, string windowTitle)
+        {
+            try
+            {
+                var directories = System.IO.Directory.GetDirectories(parentPath);
+                string? bestMatch = null;
+                int bestMatchLength = 0;
+
+                foreach (var dir in directories)
+                {
+                    var dirName = System.IO.Path.GetFileName(dir);
+                    if (!string.IsNullOrEmpty(dirName) && windowTitle.Contains(dirName) && dirName.Length > bestMatchLength)
+                    {
+                        bestMatch = dir;
+                        bestMatchLength = dirName.Length;
+                    }
+                }
+
+                return bestMatch ?? parentPath;
+            }
+            catch
+            {
+                return parentPath;
+            }
         }
 
         public static bool OpenFolder(string path)
