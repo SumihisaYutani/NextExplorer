@@ -10,8 +10,8 @@ namespace NextExplorer.Utils
         /// </summary>
         public static string GetExecutableDirectory()
         {
-            return Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) 
-                ?? Environment.CurrentDirectory;
+            // 単一ファイルアプリでも動作するようAppContext.BaseDirectoryを使用
+            return AppContext.BaseDirectory;
         }
 
         /// <summary>
